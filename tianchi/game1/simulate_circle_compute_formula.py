@@ -17,7 +17,7 @@ def linear_model(df_circle):
     print(model)
     print(lr.coef_, lr.intercept_)
 
-    df_circle.loc[:,'pred_circumference'] =
+    df_circle.loc[:,'pred_circumference'] =''
 
 
 
