@@ -22,7 +22,7 @@ class KNN:
         sortedDisIndices = np.argsort(distance)
 
         classCount = {}
-        for i in range(k):
+        for i in xrange(k):
             voteLabel = labels[sortedDisIndices[i]]
             classCount[voteLabel] = classCount.get(voteLabel,0) + 1
 
@@ -40,9 +40,9 @@ class KNN:
         cols = 32
         imgvec = np.zeros((1,rows*cols))
         fileIn = open(filename)
-        for row in range(rows):
+        for row in xrange(rows):
             lineStr = fileIn.readline()
-            for col in range(cols):
+            for col in xrange(cols):
                 imgvec[0,row*32+col] = int(lineStr[col])
 
         return imgvec
@@ -56,13 +56,13 @@ class KNN:
         trainx = np.zeros((numSamples,1024))
         trainy = []
 
-        for i in range(numSamples):
+        for i in xrange(numSamples):
             filename = files[i]
             trainx[i,:] = self.img2vec(dir + "/"+ filename)
             label = int(filename.split('_')[0])
             trainy.append(label)
 
-        print('getting testing data')
+        print 'getting testing data'
 
         test_dir = "./test"
         t_files = os.listdir(test_dir)
@@ -70,7 +70,7 @@ class KNN:
         testx_t = np.zeros((numSamples_t,1024))
         test_y_t = []
 
-        for i in range(numSamples_t):
+        for i in xrange(numSamples_t):
             filename = t_files[i]
             testx_t[i,:] = self.img2vec(test_dir)
             label = int(filename.split('_')[0])
@@ -81,16 +81,20 @@ class KNN:
 
 def mk_test2():
     trainx,trainy,test_x,test_y = KNN().loadDateSet()
+
     match = 0
-    for i in range(test_x.shape[0]):
+    for i in xrange(test_x.shape[0]):
         predict = KNN.kNNClassify(test_x[i],trainx,trainy,3)
         if predict == test_y[i]:
             match += 1
     accuracy = float(match) / test_x.shape[0]
-    print('accuracy is :',accuracy)
+    print 'accuracy is :',accuracy
+
+
 
 
 def mk_test1():
+
     dataSet, labels = KNN().createDateSet()
     testX = np.array([1.2,1.0])
     k = 3
