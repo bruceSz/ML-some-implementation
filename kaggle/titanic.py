@@ -36,6 +36,9 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import roc_curve, auc
 
 
+# TODO 1. https://www.kaggle.com/ldfreeman3/a-data-science-framework-to-achieve-99-accuracy
+# TODO 2. https://www.kaggle.com/yassineghouzam/titanic-top-4-with-ensemble-modeling
+
 _TRAIN = "../data/titan/train.csv"
 _TEST = "../data/titan/test.csv"
 
