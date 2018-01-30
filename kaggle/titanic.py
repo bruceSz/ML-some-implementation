@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 import warnings
 import seaborn as sns
-
+from sklearn import model_selection
 
 from sklearn.pipeline import make_pipeline
 from sklearn.ensemble import RandomForestClassifier
@@ -21,6 +21,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LinearRegression
 from sklearn.cross_validation import train_test_split
 import scikitplot as skplt
+from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC, LinearSVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -375,13 +376,83 @@ def select_algo(train):
     k_fold = KFold(n_splits=5, shuffle=True, random_state=0)
 
 
-def main():
+def main2():
     import_opt()
     #explore_data()
     #explore_data2()
     train, test = fe()
     algo = select_algo(train)
     train_predict()
+
+def main():
+    df_train = pd.read_csv(_TRAIN)
+    df_test = pd.read_csv(_TEST)
+    data_train_1  = df_train.copy(deep=True)
+    datas = [data_train_1,df_test]
+    # 4 C : Correcting, Completing,Creating,Converting.
+    #
+    # missing value adding
+    # removing unrelated col and cols with too much missing val.
+    for da in datas:
+        da['Age'].fillna(da['Age'].median(), inplace=True)
+        da['Embarked'].fillna(da['Embarked'].mode()[0],inplace=True)
+        da['Fare'].fillna(da['Fare'].median(),inplace=True)
+
+    drop_cols = ['PassengerId','Cabin','Ticket']
+    data_train_1.drop(drop_cols,axis=1,inplace=True)
+
+    # creating
+    for da in datas:
+        da['FamilySize'] = da['SibSp'] + da['Parch'] + 1
+        da['IsAlone'] = 15
+        mask_fm_sz = (da['FamilySize'] > 0)
+        da.loc[mask_fm_sz,'IsAlone'] = 0
+        da['Title'] = da['Name'].str.split(", ",expand=True)[1].str.split(".",expand=True)[0]
+        da['FareBin'] = pd.qcut(da['Fare'],4)
+        da['AgeBin'] = pd.cut(da['Age'].astype(int),5)
+
+    title_names = data_train_1['Title'].value_counts() < 10
+    data_train_1['Title'] = data_train_1['Title'].apply(lambda  x: 'Misc' if title_names.loc[x] == True else x)
+
+    # converting
+    label = LabelEncoder()
+    for da in datas:
+        da['Sex_code'] = label.fit_transform(da['Sex'])
+        da['Embarked_code'] = label.fit_transform(da['Embarked'])
+        da['Title_code'] = label.fit_transform(da['Title'])
+        da['AgeBin_code'] = label.fit_transform(da['AgeBin'])
+        da['FareBin_code']  = label.fit_transform(da['FareBin'])
+
+    Target = ['Survived']
+    data_train_1_x = ['Sex', 'Pclass', 'Embarked', 'Title', 'SibSp', 'Parch', 'Age', 'Fare', 'FamilySize', 'IsAlone']
+
+    data_train_1_x_calc = ['Sex_code', 'Pclass', 'Embarked_code', 'Title_code', 'SibSp', 'Parch', 'Age', 'Fare']
+
+    data_train_1_x_bin = ['Sex_code', 'Pclass', 'Embarked_code', 'Title_code', 'FamilySize', 'AgeBin_code', 'FareBin_code']
+
+    data_train_1_dummy = pd.get_dummies(data_train_1[data_train_1_x])
+    data_train_1_x_dummy = data_train_1_dummy.columns.tolist()
+    print(data_train_1_x_dummy)
+    data_train_1_xy_dummy = Target + data_train_1_dummy.columns.tolist()
+
+    #print("dumy xy:",data_train_1_xy_dummy)
+    train_x,train_y,test_x,test_y = model_selection.train_test_split(data_train_1[data_train_1_x_calc],data_train_1[Target],
+                                                                     random_state=0)
+    train_x_bin,train_y_bin,test_x_bin,test_y_bin = model_selection.train_test_split(data_train_1[data_train_1_x_bin],
+                                                                                     data_train_1[Target],random_state=0)
+    #train_x_dummy,train_y_dummy,test_x_dummy,test_y_dummy = model_selection.train_test_split(data_train_1[data_train_1_x_dummy],
+    #                                                                                         data_train_1[Target],
+    #                                                                                         random_state=0)
+
+    for x in data_train_1_x:
+        if data_train_1[x].dtype != 'float64':
+            print('Survival Correlation by:',x)
+            print(data_train_1[[x,Target[0]]].groupby(x,as_index=False).mean())
+            print("*"*10,'\n')
+    #print(data_train_1.isnull().sum())
+    #print("*"*10)
+    #print(df_test.isnull().sum())
+
 
 if __name__ == "__main__":
     main()
