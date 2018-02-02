@@ -9,6 +9,14 @@ from pandas.tools.plotting import scatter_matrix
 import warnings
 import seaborn as sns
 from sklearn import model_selection
+from  sklearn import ensemble
+from sklearn import gaussian_process
+from sklearn import linear_model
+from sklearn import naive_bayes
+from sklearn import neighbors
+from sklearn import svm
+from sklearn import tree
+from sklearn import discriminant_analysis
 
 from sklearn.pipeline import make_pipeline
 from sklearn.ensemble import RandomForestClassifier
@@ -449,9 +457,145 @@ def main():
             print('Survival Correlation by:',x)
             print(data_train_1[[x,Target[0]]].groupby(x,as_index=False).mean())
             print("*"*10,'\n')
-    #print(data_train_1.isnull().sum())
-    #print("*"*10)
-    #print(df_test.isnull().sum())
+
+    cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
+                                                random_state=0)
+        #all_algo_perf(data_train_1, data_train_1_x_bin, Target)
+    # tune models
+    # 1 dt:
+    dt = tree.DecisionTreeClassifier(random_state=0)
+    cv_results = model_selection.cross_validate(dt,data_train_1[data_train_1_x_bin],
+                                              data_train_1[Target],cv=cv_split)
+    dt.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
+
+    print(dt.get_params())
+    print("MLA Train Accuracy Mean %f"%cv_results['train_score'].mean())
+    print('MLA Test Accuracy Mean %f'% cv_results['test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print( 'MLA Test Accuracy 3*STD %f'%(cv_results['test_score'].std()*3))
+
+    print('-'*10)
+    dt_param_grid = {'criterion': ['gini', 'entropy'],
+                  'max_depth': [2, 4, 6, 8, 10],
+                  'random_state': [0]}
+    dt_param = tune_model(tree.DecisionTreeClassifier,cv_split=cv_split,param_grid=dt_param_grid,
+               da=data_train_1,fts=data_train_1_x_bin,label=Target)
+
+    dt = tree.DecisionTreeClassifier(dt_param)
+
+    #dt.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
+    #print("AFTER Train Accuracy Mean %f" % tune_model.cv_results_['mean_train_score'].mean())
+    #print('AFTER Test Accuracy Mean %f' % tune_model.cv_results_['mean_test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    #print('AFTER Test Accuracy 3*STD %f' % tune_model.cv_results_['std_test_score'].std())
+
+def tune_model(model,cv_split=None,param_grid = None,da = None,fts = None,label = None):
+
+    tune_model = model_selection.GridSearchCV(tree.DecisionTreeClassifier(),
+                                              param_grid=param_grid, scoring='roc_auc',
+                                              cv=cv_split)
+    tune_model.fit(da[fts], da[label])
+    dt_para = tune_model.best_params_
+    new_dt = tree.DecisionTreeClassifier(tune_model.best_params_)
+    new_dt.fit(da[fts],da[label])
+    print("AFTER Train Accuracy Mean %f" % tune_model.cv_results_['mean_train_score'].mean())
+    print('AFTER Test Accuracy Mean %f' % tune_model.cv_results_['mean_test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('AFTER Test Accuracy 3*STD %f' % tune_model.cv_results_['std_test_score'].std())
+    return dt_para
+
+
+def get_all_algo():
+    MLA = [
+        # Ensemble Methods
+        ensemble.AdaBoostClassifier(),
+        ensemble.BaggingClassifier(),
+        ensemble.ExtraTreesClassifier(),
+        ensemble.GradientBoostingClassifier(),
+        ensemble.RandomForestClassifier(),
+
+        # Gaussian Processes
+        gaussian_process.GaussianProcessClassifier(),
+
+        # GLM
+        linear_model.LogisticRegressionCV(),
+        linear_model.PassiveAggressiveClassifier(),
+        linear_model.RidgeClassifierCV(),
+        linear_model.SGDClassifier(),
+        linear_model.Perceptron(),
+
+        # Navies Bayes
+        naive_bayes.BernoulliNB(),
+        naive_bayes.GaussianNB(),
+
+        # Nearest Neighbor
+        neighbors.KNeighborsClassifier(),
+
+        # SVM
+        svm.SVC(probability=True),
+        svm.NuSVC(probability=True),
+        svm.LinearSVC(),
+
+        # Trees
+        tree.DecisionTreeClassifier(),
+        tree.ExtraTreeClassifier(),
+
+        # Discriminant Analysis
+        discriminant_analysis.LinearDiscriminantAnalysis(),
+        discriminant_analysis.QuadraticDiscriminantAnalysis(),
+
+        # xgboost: http://xgboost.readthedocs.io/en/latest/model.html
+        # XGBClassifier()
+    ]
+    return MLA
+
+
+def all_algo_perf(data_train_1, data_train_1_x_bin, Target):
+
+    MLA = get_all_algo()
+    # split dataset in cross-validation with this splitter class: http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.ShuffleSplit.html#sklearn.model_selection.ShuffleSplit
+    # note: this is an alternative to train_test_split
+    cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
+                                            random_state=0)  # run model 10x with 60/30 split intentionally leaving out 10%
+
+    # print(data_train_1.isnull().sum())
+    # print("*"*10)
+    # print(df_test.isnull().sum())
+    MLA_columns = ['MLA Name', 'MLA Parameters', 'MLA Train Accuracy Mean', 'MLA Test Accuracy Mean',
+                   'MLA Test Accuracy 3*STD', 'MLA Time']
+    MLA_compare = pd.DataFrame(columns=MLA_columns)
+    MLA_predict = data_train_1[Target]
+
+    row_index = 0
+    for alg in MLA:
+        # set name and parameters
+        MLA_name = alg.__class__.__name__
+        MLA_compare.loc[row_index, 'MLA Name'] = MLA_name
+        MLA_compare.loc[row_index, 'MLA Parameters'] = str(alg.get_params())
+
+        # score model with cross validation: http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.cross_validate.html#sklearn.model_selection.cross_validate
+        cv_results = model_selection.cross_validate(alg, data_train_1[data_train_1_x_bin],
+                                                    data_train_1[Target], cv=cv_split)
+
+        MLA_compare.loc[row_index, 'MLA Time'] = cv_results['fit_time'].mean()
+        MLA_compare.loc[row_index, 'MLA Train Accuracy Mean'] = cv_results['train_score'].mean()
+        MLA_compare.loc[row_index, 'MLA Test Accuracy Mean'] = cv_results['test_score'].mean()
+        # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+        # should statistically capture 99.7% of the subsets
+        MLA_compare.loc[row_index, 'MLA Test Accuracy 3*STD'] = cv_results[
+                                                                    'test_score'].std() * 3
+        # let's know the worst that can happen!
+
+        # save MLA predictions - see section 6 for usage
+        alg.fit(data_train_1[data_train_1_x_bin], data_train_1[Target])
+        MLA_predict[MLA_name] = alg.predict(data_train_1[data_train_1_x_bin])
+
+        row_index += 1
+    MLA_compare.sort_values(by=['MLA Test Accuracy Mean'], ascending=False, inplace=True)
+    print(MLA_compare[['MLA Name', 'MLA Train Accuracy Mean', 'MLA Test Accuracy Mean']])
 
 
 if __name__ == "__main__":
