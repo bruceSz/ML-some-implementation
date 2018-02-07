@@ -1,4 +1,4 @@
-
+#coding=utf-8
 import numpy as np
 import scipy as sp
 import matplotlib as mpl
@@ -43,6 +43,12 @@ from sklearn.metrics import confusion_matrix
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.metrics import roc_curve, auc
+import warnings
+warnings.warn("deprecated",DeprecationWarning)
+
+from sklearn import ensemble
+
+import common
 
 
 # TODO 1. https://www.kaggle.com/ldfreeman3/a-data-science-framework-to-achieve-99-accuracy
@@ -163,13 +169,13 @@ def fe():
     print(train_set_1_median.loc[(3,8)])
     #train_set_1_median = train_set_1_median.reset_index()
     #train_set_1_median = train_set_1_median[["Pclass", "SibSp","Age"]]
-    train = fill_age_with1(df_train,train_set_1_median,'Age',age_mean)
+    train = common.fill_age_with1(df_train,train_set_1_median,'Age',age_mean)
     #train = fill_age_with(df_train,train_set_1_median,["Pclass", "SibSp"],'Age')
     #train[train['Age'].isnull()]= train['Age'].mean()
     print train.shape
     test_set_1 = df_test.groupby(["Pclass", "SibSp"])
     test_set_1_median = test_set_1.median()
-    test = fill_age_with1(df_test,test_set_1_median,'Age',age_mean)
+    test = common.fill_age_with1(df_test,test_set_1_median,'Age',age_mean)
 
     train["Cabin"] = train['Cabin'].fillna("U")
     test["Cabin"] = test['Cabin'].fillna("U")
@@ -323,45 +329,6 @@ def fill_age_with(df,groupby_df,group_by_col, col_n):
     return ret
 
 
-def fill_age_with1(df, groupby_df,col_n,default):
-    names = groupby_df.index.names
-    ret = []
-    for idx_tuple in groupby_df.index:
-        cond = None
-        tmp_df = df.copy()
-        for i in range(len(names)):
-            tmp_df = tmp_df.loc[tmp_df[names[i]]==idx_tuple[i]]
-        #print("Before shape:")
-        #print(tmp_df.shape)
-        #print(tmp_df[col_n])
-        #print("Group by :")
-        #print(groupby_df.loc[idx_tuple][col_n])
-        if np.isnan(groupby_df.loc[idx_tuple][col_n]):
-            tmp_df[col_n] = default
-        else:
-            tmp_df[col_n] = groupby_df.loc[idx_tuple][col_n]
-        ret.append(tmp_df)
-    return pd.concat(ret)
-
-def fill_age_example():
-    s1 = np.array([1,2, 4])
-    s2 = np.array([1,2,7,8])
-    s3 = np.array([9,10,11,12])
-    df = pd.DataFrame([s1,s2,s3],columns=['a','b','c','d'])
-    df_g = df.groupby(['a','b']).mean()
-
-    print "Raw dataframe:"
-    print df
-    print "Dataframe group by ret"
-
-    print("Reset index")
-    #df_g = df_g.reset_index()
-    #df_g = df_g[['a','b','d']]
-    #df = fill_age_with(df,df_g,['a','b'],'d')
-    df = fill_age_with1(df,df_g,'d')
-    print "After fill age with avg"
-    print(df)
-
 def train_predict(train, test):
     x = train.drop(["Survived"], axis=1)
     y = train["Survived"]
@@ -392,7 +359,7 @@ def main2():
     algo = select_algo(train)
     train_predict()
 
-def main():
+def main_sub_0206():
     df_train = pd.read_csv(_TRAIN)
     df_test = pd.read_csv(_TEST)
     data_train_1  = df_train.copy(deep=True)
@@ -440,9 +407,9 @@ def main():
 
     data_train_1_dummy = pd.get_dummies(data_train_1[data_train_1_x])
     data_train_1_x_dummy = data_train_1_dummy.columns.tolist()
-    print(data_train_1_x_dummy)
     data_train_1_xy_dummy = Target + data_train_1_dummy.columns.tolist()
 
+    submit_cols = ['PassengerId','Survived']
     #print("dumy xy:",data_train_1_xy_dummy)
     train_x,train_y,test_x,test_y = model_selection.train_test_split(data_train_1[data_train_1_x_calc],data_train_1[Target],
                                                                      random_state=0)
@@ -450,112 +417,126 @@ def main():
                                                                                      data_train_1[Target],random_state=0)
     #train_x_dummy,train_y_dummy,test_x_dummy,test_y_dummy = model_selection.train_test_split(data_train_1[data_train_1_x_dummy],
     #                                                                                         data_train_1[Target],
-    #                                                                                         random_state=0)
-
-    for x in data_train_1_x:
-        if data_train_1[x].dtype != 'float64':
-            print('Survival Correlation by:',x)
-            print(data_train_1[[x,Target[0]]].groupby(x,as_index=False).mean())
-            print("*"*10,'\n')
+    #
+    #                                                                     random_state=0)
+    # correlation compute.
+    #for x in data_train_1_x:
+    #    if data_train_1[x].dtype != 'float64':
+    #        print('Survival Correlation by:',x)
+    #        print(data_train_1[[x,Target[0]]].groupby(x,as_index=False).mean())
+    #        print("*"*10,'\n')
 
     cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
                                                 random_state=0)
         #all_algo_perf(data_train_1, data_train_1_x_bin, Target)
     # tune models
     # 1 dt:
-    dt = tree.DecisionTreeClassifier(random_state=0)
-    cv_results = model_selection.cross_validate(dt,data_train_1[data_train_1_x_bin],
-                                              data_train_1[Target],cv=cv_split)
-    dt.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
+    #dt = tree.DecisionTreeClassifier(random_state=0)
+    #cv_results = model_selection.cross_validate(dt,data_train_1[data_train_1_x_bin],
+    #                                          data_train_1[Target],cv=cv_split)
+    #dt.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
 
-    print(dt.get_params())
-    print("MLA Train Accuracy Mean %f"%cv_results['train_score'].mean())
-    print('MLA Test Accuracy Mean %f'% cv_results['test_score'].mean())
+    #print(dt.get_params())
+    #print("MLA Train Accuracy Mean %f"%cv_results['train_score'].mean())
+    #print('MLA Test Accuracy Mean %f'% cv_results['test_score'].mean())
     # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
     # should statistically capture 99.7% of the subsets
-    print( 'MLA Test Accuracy 3*STD %f'%(cv_results['test_score'].std()*3))
+    #print( 'MLA Test Accuracy 3*STD %f'%(cv_results['test_score'].std()*3))
 
+
+    base_dt_sub = pd.DataFrame(columns=submit_cols)
     print('-'*10)
     dt_param_grid = {'criterion': ['gini', 'entropy'],
                   'max_depth': [2, 4, 6, 8, 10],
                   'random_state': [0]}
-    dt_param = tune_model(tree.DecisionTreeClassifier,cv_split=cv_split,param_grid=dt_param_grid,
+    model,dt_param = common.tune_model(tree.DecisionTreeClassifier(),cv_split=cv_split,param_grid=dt_param_grid,
                da=data_train_1,fts=data_train_1_x_bin,label=Target)
-
-    dt = tree.DecisionTreeClassifier(dt_param)
-
-    #dt.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
-    #print("AFTER Train Accuracy Mean %f" % tune_model.cv_results_['mean_train_score'].mean())
-    #print('AFTER Test Accuracy Mean %f' % tune_model.cv_results_['mean_test_score'].mean())
+    #base_dt_sub[''] = model.predict(df_test[data_train_1_x_bin])
+    df_test['Survived'] = model.predict(df_test[data_train_1_x_bin])
+    base_dt_sub[submit_cols] = df_test[submit_cols]
+    base_dt_sub.to_csv("../data/titan/base_dt.csv",index=False)
+    print("Base Train Accuracy Mean %f" % model.cv_results_['mean_train_score'].mean())
+    print('Base Test Accuracy Mean %f' % model.cv_results_['mean_test_score'].mean())
     # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
     # should statistically capture 99.7% of the subsets
-    #print('AFTER Test Accuracy 3*STD %f' % tune_model.cv_results_['std_test_score'].std())
+    print('Base Test Accuracy 3*STD %f' % model.cv_results_['std_test_score'].std())
+    #tune_all_algo(data_train_1,data_train_1_x_bin,Target,cv_split)
 
-def tune_model(model,cv_split=None,param_grid = None,da = None,fts = None,label = None):
+    vote_est, params = common.get_all_tuned_algo()
 
-    tune_model = model_selection.GridSearchCV(tree.DecisionTreeClassifier(),
-                                              param_grid=param_grid, scoring='roc_auc',
-                                              cv=cv_split)
-    tune_model.fit(da[fts], da[label])
-    dt_para = tune_model.best_params_
-    new_dt = tree.DecisionTreeClassifier(tune_model.best_params_)
-    new_dt.fit(da[fts],da[label])
-    print("AFTER Train Accuracy Mean %f" % tune_model.cv_results_['mean_train_score'].mean())
-    print('AFTER Test Accuracy Mean %f' % tune_model.cv_results_['mean_test_score'].mean())
+    for pair in vote_est:
+        name = pair[0]
+        model = pair[1]
+        model_cv = model_selection.cross_validate(model,data_train_1[data_train_1_x_bin],
+                                                  data_train_1[Target],
+                                                  cv=cv_split)
+        model.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
+
+        sub_df = pd.DataFrame(columns=submit_cols)
+        df_test['Survived'] = model.predict(df_test[data_train_1_x_bin])
+        sub_df[submit_cols] = df_test[submit_cols]
+        sub_df.to_csv("../data/titan/%s_dt.csv"%name, index=False)
+
+        print(" %s train Accuracy Mean %f" % (name,model_cv['train_score'].mean()))
+        print('%s Test Accuracy Mean %f' % (name,model_cv['test_score'].mean()))
+        # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+        # should statistically capture 99.7% of the subsets
+        print('%s Test Accuracy 3*STD %f' % (name, model_cv['test_score'].std()))
+
+    grid_hard = ensemble.VotingClassifier(estimators=vote_est,voting='hard')
+    grid_hard_cv = model_selection.cross_validate(grid_hard,data_train_1[data_train_1_x_bin],
+                                                  data_train_1[Target],
+                                                  cv=cv_split)
+    grid_hard.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
+    sub_df = pd.DataFrame(columns=submit_cols)
+    df_test['Survived'] = grid_hard.predict(df_test[data_train_1_x_bin])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/grid_hard_dt.csv"  , index=False)
+    print("Hard voting Train Accuracy Mean %f" % grid_hard_cv['train_score'].mean())
+    print('Hard voting Test Accuracy Mean %f' % grid_hard_cv['test_score'].mean())
     # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
     # should statistically capture 99.7% of the subsets
-    print('AFTER Test Accuracy 3*STD %f' % tune_model.cv_results_['std_test_score'].std())
-    return dt_para
+    print('Hard voting Test Accuracy 3*STD %f' % grid_hard_cv['test_score'].std())
+
+    grid_soft = ensemble.VotingClassifier(estimators=vote_est,voting='soft')
+    grid_soft_cv = model_selection.cross_validate(grid_soft,data_train_1[data_train_1_x_bin],
+                                                  data_train_1[Target],
+                                                  cv=cv_split)
+    grid_soft.fit(data_train_1[data_train_1_x_bin],data_train_1[Target])
+
+    sub_df = pd.DataFrame(columns=submit_cols)
+
+    df_test['Survived'] = grid_soft.predict(df_test[data_train_1_x_bin])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/grid_soft_dt.csv", index=False)
+
+    print("Soft voting Train Accuracy Mean %f" % grid_soft_cv['train_score'].mean())
+    print('Soft voting Test Accuracy Mean %f' % grid_soft_cv['test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('Soft voting Test Accuracy 3*STD %f' % grid_soft_cv['test_score'].std())
 
 
-def get_all_algo():
-    MLA = [
-        # Ensemble Methods
-        ensemble.AdaBoostClassifier(),
-        ensemble.BaggingClassifier(),
-        ensemble.ExtraTreesClassifier(),
-        ensemble.GradientBoostingClassifier(),
-        ensemble.RandomForestClassifier(),
 
-        # Gaussian Processes
-        gaussian_process.GaussianProcessClassifier(),
 
-        # GLM
-        linear_model.LogisticRegressionCV(),
-        linear_model.PassiveAggressiveClassifier(),
-        linear_model.RidgeClassifierCV(),
-        linear_model.SGDClassifier(),
-        linear_model.Perceptron(),
+def fs(dt_param,da,fts,Target,cv_split):
+    from  sklearn import feature_selection
+    base_model = tree.DecisionTreeClassifier(**dt_param)
+    dtree_rfe = feature_selection.RFECV(base_model,step=1,scoring='accuracy',cv=cv_split)
+    dtree_rfe.fit(da[fts],da[Target])
+    x_rfe = da[fts].columns.values[dtree_rfe.get_support()]
+    print(dtree_rfe.get_support())
+    print(dtree_rfe)
 
-        # Navies Bayes
-        naive_bayes.BernoulliNB(),
-        naive_bayes.GaussianNB(),
 
-        # Nearest Neighbor
-        neighbors.KNeighborsClassifier(),
 
-        # SVM
-        svm.SVC(probability=True),
-        svm.NuSVC(probability=True),
-        svm.LinearSVC(),
 
-        # Trees
-        tree.DecisionTreeClassifier(),
-        tree.ExtraTreeClassifier(),
 
-        # Discriminant Analysis
-        discriminant_analysis.LinearDiscriminantAnalysis(),
-        discriminant_analysis.QuadraticDiscriminantAnalysis(),
-
-        # xgboost: http://xgboost.readthedocs.io/en/latest/model.html
-        # XGBClassifier()
-    ]
-    return MLA
 
 
 def all_algo_perf(data_train_1, data_train_1_x_bin, Target):
 
-    MLA = get_all_algo()
+    MLA = common.get_all_algo()
     # split dataset in cross-validation with this splitter class: http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.ShuffleSplit.html#sklearn.model_selection.ShuffleSplit
     # note: this is an alternative to train_test_split
     cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
@@ -598,6 +579,418 @@ def all_algo_perf(data_train_1, data_train_1_x_bin, Target):
     print(MLA_compare[['MLA Name', 'MLA Train Accuracy Mean', 'MLA Test Accuracy Mean']])
 
 
+def main():
+
+    df_train_raw = pd.read_csv(_TRAIN)
+    df_test = pd.read_csv(_TEST)
+    df_train = df_train_raw.copy(deep=True)
+    all_datas = [df_train, df_test]
+    #print(df_train.shape)
+    #print(df_test.shape)
+    from  sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import train_test_split
+    raw_names = [u'PassengerId', u'Pclass', u'Name', u'Sex', u'Age',
+       u'SibSp', u'Parch', u'Ticket', u'Fare', u'Cabin', u'Embarked']
+    train_names = [u'PassengerId', u'Pclass', u'Name', u'Sex', u'Age',
+    u'SibSp', u'Parch', u'Ticket', u'Fare', u'Cabin', u'Embarked']
+    target_col = 'Survived'
+
+    # age fillna
+    df_train['Age']=df_train.groupby(["Pclass","SibSp","Parch","Sex"])['Age']\
+        .transform(lambda  x:x.fillna(x.mean()))
+    df_train['Age'].fillna((df_train['Age'].value_counts().idxmax()),inplace=True)
+
+    df_test['Age'] = df_test.groupby(["Pclass","SibSp","Parch","Sex"])['Age']\
+        .transform(lambda x: x.fillna(x.mean()))
+    df_test['Age'].fillna(df_test['Age'].value_counts().idxmax(),inplace=True)
+
+    # cabin fillna
+    df_train['Cabin'].fillna((df_train['Cabin'].value_counts().idxmax()), inplace=True)
+    df_test['Cabin'].fillna(df_test['Cabin'].value_counts().idxmax(), inplace=True)
+
+    # train embark fillna
+    #df_train['Embarked'].fillna(df_train['Embarked'].value_counts().idxmax(),inplace=True)
+    df_train['Embarked'].fillna(df_train['Embarked'].mode()[0],inplace=True)
+
+    # test fare fillna
+    #df_test['Fare'].fillna(df_test['Fare'].value_counts().idxmax(),inplace=True)
+    df_test['Fare'].fillna(df_test['Fare'].median(), inplace=True)
+
+    # fe transformation
+
+
+    print(df_train.head(2))
+    print(df_train.info())
+    print(df_test.info())
+
+    # sex to dummies
+    for idx,da in enumerate(all_datas):
+        all_datas[idx] = pd.get_dummies(da,columns=['Sex'],
+                                         prefix=['sex_'],
+                                         prefix_sep="",
+                                         dummy_na=False,
+                                         drop_first=False)
+    raw_names.extend(['sex_female', 'sex_male'])
+    train_names.extend(['sex_female', 'sex_male'])
+    train_names.remove('Sex')
+    df_train[['sex_female','sex_male']] = all_datas[0][['sex_female','sex_male']]
+    df_test[['sex_female','sex_male']] = all_datas[1][['sex_female','sex_male']]
+
+    # embarked to dummies
+    for idx,da in enumerate(all_datas):
+        all_datas[idx] = pd.get_dummies(da,columns=['Embarked'],
+                                        prefix=['embarked_'],
+                                        prefix_sep="",
+                                        dummy_na=False,
+                                        drop_first=False)
+    t_names = [col_name for col_name in all_datas[0].columns if col_name.startswith("embarked_")]
+    raw_names.extend(t_names)
+    train_names.extend(t_names)
+    train_names.remove('Embarked')
+    df_train[t_names] = all_datas[0][t_names]
+    df_test[t_names] = all_datas[1][t_names]
+
+    #cabin to one-hot
+    train_v_set = compute_val_set(df_train,'Cabin')
+    df_train = compute_dummies(df_train,'Cabin','Cabin_',train_v_set)
+    df_test = compute_dummies(df_test,'Cabin','Cabin_',train_v_set)
+    t_names = [col_name for col_name in df_train.columns if col_name.startswith("Cabin_")]
+    raw_names.extend(t_names)
+    train_names.extend(t_names)
+    train_names.remove("Cabin")
+
+    # name to title and then to category val
+    df_train['title'] = df_train['Name'].map(lambda name: name.split(",")[1].split(".")[0].strip())
+    df_train = title_short(df_train)
+
+    df_test['title'] = df_train['Name'].map(lambda name: name.split(",")[1].split(".")[0].strip())
+    df_test = title_short(df_test)
+    train_title_set = compute_val_set(df_train,'title')
+    df_train = compute_dummies(df_train,'title','title_',train_title_set)
+    df_test = compute_dummies(df_test,'title','title_',train_title_set)
+    t_names = [col_name for col_name in df_train.columns if col_name.startswith("title_")]
+    raw_names.extend(t_names)
+    train_names.extend(t_names)
+    train_names.remove("Name")
+
+    # add more fts(by combining)
+    for idx,da in enumerate(all_datas):
+        all_datas[idx]['FamilySize'] = da['SibSp'] + da['Parch'] + 1
+        all_datas[idx]['IsAlone'] = 1
+        mask_fm_sz = (all_datas[idx]['FamilySize'] > 0)
+        all_datas[idx].loc[mask_fm_sz, 'IsAlone'] = 0
+    #train_names.remove("title")
+    raw_names.extend(["FamilySize","IsAlone"])
+    train_names.extend(["FamilySize","IsAlone"])
+    df_train[["FamilySize","IsAlone"]] = all_datas[0][["FamilySize","IsAlone"]]
+    df_test[["FamilySize","IsAlone"]] = all_datas[1][["FamilySize","IsAlone"]]
+
+    train_names.remove('PassengerId')
+    train_names.remove('Ticket')
+
+
+    cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
+                                            random_state=0)
+    submit_cols = ['PassengerId', 'Survived']
+    vote_est, param = common.get_all_tuned_algo()
+    df = df_train
+    fts = train_names
+    target = target_col
+    cv = cv_split
+    for v in vote_est:
+        print(v)
+    grid_hard = ensemble.VotingClassifier(estimators=vote_est, voting='hard')
+    grid_hard_cv = model_selection.cross_validate(grid_hard, df[fts],
+                                                  df[target],
+                                                  cv=cv)
+    grid_hard.fit(df[fts], df[target])
+    sub_df = pd.DataFrame(columns=submit_cols)
+    df_test['Survived'] = grid_hard.predict(df_test[fts])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/grid_hard_dt.csv", index=False)
+    print("Hard voting Train Accuracy Mean %f" % grid_hard_cv['train_score'].mean())
+    print('Hard voting Test Accuracy Mean %f' % grid_hard_cv['test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('Hard voting Test Accuracy 3*STD %f' % grid_hard_cv['test_score'].std())
+
+    grid_soft = ensemble.VotingClassifier(estimators=vote_est, voting='soft')
+    grid_soft_cv = model_selection.cross_validate(grid_soft, df[fts],
+                                                  df[target],
+                                                  cv=cv)
+    grid_soft.fit(df[fts], df[target])
+
+    sub_df = pd.DataFrame(columns=submit_cols)
+
+    df_test['Survived'] = grid_soft.predict(df_test[fts])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/grid_soft_dt.csv", index=False)
+
+    print("Soft voting Train Accuracy Mean %f" % grid_soft_cv['train_score'].mean())
+    print('Soft voting Test Accuracy Mean %f' % grid_soft_cv['test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('Soft voting Test Accuracy 3*STD %f' % grid_soft_cv['test_score'].std())
+
+
+    #vote_est, params = common.get_all_tuned_algo()
+
+    #for pair in vote_est:
+    #    name = pair[0]
+    #    model = pair[1]
+        #model_cv = model_selection.cross_validate(model, df_train[train_names],
+        #                                          df_train[target_col],
+        #                                          cv=cv_split)
+    #    model.fit(df_train[train_names], df_train[target_col])
+
+    #   sub_df = pd.DataFrame(columns=submit_cols)
+    #    df_test['Survived'] = model.predict(df_test[train_names])
+    #    sub_df[submit_cols] = df_test[submit_cols]
+    #    sub_df.to_csv("../data/titan/%s_dt.csv" % name, index=False)
+
+        #print(" %s train Accuracy Mean %f" % (name, model_cv['train_score'].mean()))
+        #print('%s Test Accuracy Mean %f' % (name, model_cv['test_score'].mean()))
+        # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+        # should statistically capture 99.7% of the subsets
+        #print('%s Test Accuracy 3*STD %f' % (name, model_cv['test_score'].std()))
+
+    #train_random_forest(df_train,train_names,target_col,cv_split,df_test)
+    #rfc = ensemble.RandomForestClassifier(max_features='auto',n_estimators=100,bootstrap=100,criterion='entropy')
+    #plot_cv_with_best_param(rfc,df_train,train_names,target_col)
+
+def plot_cv_with_best_param(model,df,fts,target):
+    for i in range(10,11):
+        cv_results = model_selection.cross_validate(model, df[fts],
+                                       df[target],
+                                       cv=i)
+        print("%d fold"%i)
+        print("fit time:",cv_results['fit_time'].mean())
+        print("train score mean:",cv_results['train_score'].mean())
+        print('test score mean',cv_results['test_score'].mean())
+        # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+        # should statistically capture 99.7% of the subsets
+        print('test score std',cv_results['test_score'].std() * 3)
+
+
+def train_random_forest(df,fts,target,cv,df_test):
+    submit_cols = ['PassengerId', 'Survived']
+    param = {
+        'n_estimators':[100,300,500,800,100],
+        'max_features':['sqrt','auto'],
+
+        'criterion':['gini','entropy'],
+        'bootstrap':[True,False]
+    }
+    rfc = ensemble.RandomForestClassifier()
+    import time
+    from sklearn.model_selection import GridSearchCV
+    start = time.time()
+    rfc_cv,param = common.tune_model(rfc,cv_split=cv,param_grid=param,da=df,fts=fts,label=target)
+    model = rfc_cv
+    print(model.best_params_)
+    sub_df = pd.DataFrame(columns=submit_cols)
+    df_test['Survived'] = model.predict(df_test[fts])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/tuned_randomforest_dt.csv", index=False)
+    print("Base Train Accuracy Mean %f" % model.cv_results_['mean_train_score'].mean())
+    print('Base Test Accuracy Mean %f' % model.cv_results_['mean_test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('BaseTest Accuracy 3*STD %f' % model.cv_results_['std_test_score'].std())
+    end = time.time()
+    print("Cost time: %f secs"%(end-start))
+
+
+    plot_cv_with_best_param(model,df,fts,target)
+
+
+def train_gbdt(df,fts,target,cv):
+
+    #vote_est, param = common.get_all_tuned_algo()
+    submit_cols = ['PassengerId', 'Survived']
+    gbdt = ensemble.GradientBoostingClassifier()
+    param ={
+        # GradientBoostingClassifier - http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier
+         #'loss': ['deviance', 'exponential'], #default=’deviance’
+         'n_estimators':[300,500,1000],
+         'learning_rate': [0.1,0.5,0.8],
+        # default=0.1 -- 12/31/17 set to reduce runtime -- The best parameter for GradientBoostingClassifier is {'learning_rate': 0.05, 'max_depth': 2, 'n_estimators': 300, 'random_state': 0} with a runtime of 264.45 seconds.
+        #    'n_estimators': 300,
+        # default=100 -- 12/31/17 set to reduce runtime -- The best parameter for GradientBoostingClassifier is {'learning_rate': 0.05, 'max_depth': 2, 'n_estimators': 300, 'random_state': 0} with a runtime of 264.45 seconds.
+        # 'criterion': ['friedman_mse', 'mse', 'mae'], #default=”friedman_mse”
+            'max_depth': [2,4,6,10],  # default=3
+            'subsample': [1.0,0.6]
+     }
+
+    model, dt_param = common.tune_model(gbdt, cv_split=cv, param_grid=param,
+                                              da=df, fts=fts, label=target)
+    model.fit(df[fts],df[target])
+    print(model.best_params_)
+    print("Base Train Accuracy Mean %f" % model.cv_results_['mean_train_score'].mean())
+    print('Base Test Accuracy Mean %f' % model.cv_results_['mean_test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('Base Test Accuracy 3*STD %f' % model.cv_results_['std_test_score'].std())
+    #perf_model(vote_est,df_train,train_names,target_col,cv_split,submit_cols,df_test)
+
+    #sns.heatmap(df_train.corr(),annot=True)
+    #plt.show()
+
+
+def perf_model(vote_est,df,fts,target,cv,submit_cols,df_test):
+    #vote_est, param = common.get_all_tuned_algo()
+
+    #perf_model(vote_est, df, fts, target, cv, submit_cols, df_test)
+    for v in vote_est:
+        print(v)
+    grid_hard = ensemble.VotingClassifier(estimators=vote_est, voting='hard')
+    grid_hard_cv = model_selection.cross_validate(grid_hard, df[fts],
+                                                  df[target],
+                                                  cv=cv)
+    grid_hard.fit(df[fts], df[target])
+    sub_df = pd.DataFrame(columns=submit_cols)
+    df_test['Survived'] = grid_hard.predict(df_test[fts])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/grid_hard_dt.csv", index=False)
+    print("Hard voting Train Accuracy Mean %f" % grid_hard_cv['train_score'].mean())
+    print('Hard voting Test Accuracy Mean %f' % grid_hard_cv['test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('Hard voting Test Accuracy 3*STD %f' % grid_hard_cv['test_score'].std())
+
+    grid_soft = ensemble.VotingClassifier(estimators=vote_est, voting='soft')
+    grid_soft_cv = model_selection.cross_validate(grid_soft, df[fts],
+                                                  df[target],
+                                                  cv=cv)
+    grid_soft.fit(df[fts], df[target])
+
+    sub_df = pd.DataFrame(columns=submit_cols)
+
+    df_test['Survived'] = grid_soft.predict(df_test[fts])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/grid_soft_dt.csv", index=False)
+
+    print("Soft voting Train Accuracy Mean %f" % grid_soft_cv['train_score'].mean())
+    print('Soft voting Test Accuracy Mean %f' % grid_soft_cv['test_score'].mean())
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    print('Soft voting Test Accuracy 3*STD %f' % grid_soft_cv['test_score'].std())
+
+def gen_best_algo(df_train,train_names,target_col):
+
+    cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
+                                                random_state=0)
+    vote_est,params = common.get_all_algo()
+    import time
+    for clf,param in zip(vote_est,params):
+        model = clf[1]
+        name = model.__class__.__name__
+        start = time.time()
+        print("start tuning %s"%name)
+        tuned_model, dt_param = common.tune_model(model, cv_split=cv_split, param_grid=param,
+                                            da=df_train, fts=train_names, label=target_col)
+
+        print(dt_param)
+        print("%s Train Accuracy Mean %f" % (name,tuned_model.cv_results_['mean_train_score'].mean()))
+        print('%s Test Accuracy Mean %f' % (name,tuned_model.cv_results_['mean_test_score'].mean()))
+        # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+        # should statistically capture 99.7% of the subsets
+        print('%s Test Accuracy 3*STD %f' % (name, tuned_model.cv_results_['std_test_score'].std()))
+        end = time.time()
+        print("cost %f secs" %(end-start))
+    #train_x,test_x,train_y,test_y = train_test_split(df_train[train_names],df_train[target_col])
+    #cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
+    #                                        random_state=0)
+
+    #lr = LogisticRegression()
+    #lr.fit(train_x,train_y)
+    #name='lr'
+    #model = lr
+    #print(" %s train Accuracy Mean %f" % (name, model.score(train_x,train_y).mean()))
+    #print('%s Test Accuracy Mean %f' % (name, model.score(train_x,train_y).mean()))
+    # if this is a non-bias random sample, then +/-3 standard deviations (std) from the mean,
+    # should statistically capture 99.7% of the subsets
+    #print('%s Test Accuracy 3*STD %f' % (name, model.score(train_x,train_y).std()))
+
+
+def title_short(df):
+    title_map = {"Capt": "Officer",
+                 "Col": "Officer",
+                 "Major": "Officer",
+                 "Jonkheer": "Royalty",
+                 "Don": "Royalty",
+                 "Sir": "Royalty",
+                 "Dr": "Officer",
+                 "Rev": "Officer",
+                 "the Countess": "Royalty",
+                 "Dona": "Royalty",
+                 "Mme": "Mrs",
+                 "Mlle": "Miss",
+                 "Ms": "Mrs",
+                 "Mr": "Mr",
+                 "Mrs": "Mrs",
+                 "Miss": "Miss",
+                 "Master": "Master",
+                 "Lady": "Royalty"
+                 }
+    df['title'] = df['title'].map(title_map)
+    return df
+
+
+def compute_val_set(df,col):
+    cabin_set = set()
+    for cabin in df[col].values:
+        names = cabin.split(" ")
+        names = [name.strip() for name in names]
+        for n in names:
+            cabin_set.add(n)
+    return cabin_set
+
+def compute_dummies(df,col,col_prefix,col_val_set):
+    # cabin encoding
+    cabin_set = set()
+
+
+    n_prefix = col_prefix
+    cabin_set = col_val_set
+
+
+    cabin_dict = dict()
+    for idx,cabin in enumerate(cabin_set):
+        cabin_dict[cabin] = idx
+
+    cols = [n_prefix+str(i) for i in range(len(cabin_set)+1)]
+    tmp_df = pd.DataFrame(columns=cols)
+
+    def val_to_encoding(val):
+        values = [0 for i in range(len(cabin_set)+1)]
+        names = [ n.strip() for n in val.split(" ")]
+        names = filter(lambda  x:len(x)>0,names)
+        for n in names :
+            if n in cabin_dict:
+                values[cabin_dict[n]] = 1
+            else:
+                values[-1] = 1
+        return values
+    idx = 0
+    for enc in df[col].apply(lambda  x:val_to_encoding(x)):
+        tmp_df.loc[idx,cols] = enc
+        idx += 1
+    df[cols] = tmp_df[cols]
+    return df
+
+
+def cabin_dummies_test():
+    df = pd.DataFrame(columns=['Cabin'])
+    df.loc[0, 'Cabin'] = "e12"
+    df.loc[1, 'Cabin'] = 'e12 e13'
+    df.loc[2, 'Cabin'] = 'e13'
+    df = compute_dummies(df)
+    print(df)
+
 if __name__ == "__main__":
+    #main_sub_0206()
     main()
+
+    #get_all_tuned_algo()
     #fill_age_example()
