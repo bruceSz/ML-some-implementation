@@ -190,7 +190,7 @@ def fill_age_example():
     print(df)
 
 
-def get_all_algo():
+def get_all_algo(type='cls'):
     MLA = [
         # Ensemble Methods
         ensemble.AdaBoostClassifier(),
@@ -232,7 +232,33 @@ def get_all_algo():
         # xgboost: http://xgboost.readthedocs.io/en/latest/model.html
         # XGBClassifier()
     ]
-    vote_est = [
+    vote_est_reg = [
+        # Ensemble Methods: http://scikit-learn.org/stable/modules/ensemble.html
+        ('ada boost', ensemble.AdaBoostRegressor()),
+        #('bagging', ensemble.BaggingRegressor()),
+        #('extratree', ensemble.ExtraTreesRegressor),
+        # ('gbc', ensemble.GradientBoostingClassifier()),
+        ('random_forest', ensemble.RandomForestRegressor),
+        ('decision tree', tree.DecisionTreeRegressor),
+
+        # Gaussian Processes: http://scikit-learn.org/stable/modules/gaussian_process.html#gaussian-process-classification-gpc
+        # ('gpc', gaussian_process.GaussianProcessClassifier()),
+
+        # GLM: http://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+        # ('lr', linear_model.LogisticRegressionCV()),
+
+        # Navies Bayes: http://scikit-learn.org/stable/modules/naive_bayes.html
+        # ('bnb', naive_bayes.BernoulliNB()),
+        # ('gnb', naive_bayes.GaussianNB()),
+
+        # Nearest Neighbor: http://scikit-learn.org/stable/modules/neighbors.html
+        ('knn', neighbors.KNeighborsRegressor),
+
+        # SVM: http://scikit-learn.org/stable/modules/svm.html
+        ('svc', svm.SVR())
+    ]
+
+    vote_est_cls = [
         # Ensemble Methods: http://scikit-learn.org/stable/modules/ensemble.html
         ('ada boost', ensemble.AdaBoostClassifier()),
         ('bagging', ensemble.BaggingClassifier()),
@@ -257,6 +283,10 @@ def get_all_algo():
         # SVM: http://scikit-learn.org/stable/modules/svm.html
         ('svc', svm.SVC(probability=True))
     ]
+    if type == "cls":
+        vote_est = vote_est_cls
+    else:
+        vote_est = vote_est_reg
     grid_n_estimator = [10, 50, 100, 300]
     grid_ratio = [.1, .25, .5, .75, 1.0]
     grid_learn = [.01, .03, .05, .1, .25]
@@ -274,19 +304,19 @@ def get_all_algo():
             'random_state':grid_seed
         }],
         # bagging
-        [{
-              'n_estimators': grid_n_estimator, #default=10
-            'max_samples': grid_ratio, #default=1.0
-            'random_state': grid_seed
-        }],
+        #[{
+        #      'n_estimators': grid_n_estimator, #default=10
+        #    'max_samples': grid_ratio, #default=1.0
+        #    'random_state': grid_seed
+        #}],
         # extratrees
-        [{
+        #[{
             # ExtraTreesClassifier - http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesClassifier.html#sklearn.ensemble.ExtraTreesClassifier
-            'n_estimators': grid_n_estimator, # default=10
-            'criterion': grid_criterion,  # default='gini'
-            'max_depth': grid_max_depth,  # default=None
-            'random_state': grid_seed
-        }],
+        #    'n_estimators': grid_n_estimator, # default=10
+        #    'criterion': grid_criterion,  # default='gini'
+        #    'max_depth': grid_max_depth,  # default=None
+        #    'random_state': grid_seed
+        #}],
         # gradient boosting
         #[{
             # GradientBoostingClassifier - http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html#sklearn.ensemble.GradientBoostingClassifier

@@ -691,12 +691,39 @@ def main():
 
     cv_split = model_selection.ShuffleSplit(n_splits=10, test_size=.3, train_size=.6,
                                             random_state=0)
+
     submit_cols = ['PassengerId', 'Survived']
+    dt = ensemble.GradientBoostingClassifier(random_state=0)
+
+    param_test2 = {
+                    'max_depth': range(3, 14,2),
+                   'min_samples_split': range(50, 201, 20),
+                   'n_estimators':[30,60,80,100,200],
+                   'min_samples_leaf' :[20,10,5,30],
+                   'max_features' :['sqrt','auto']
+                   }
+    gsearch2 = GridSearchCV(estimator=dt.set_params(
+                                                             random_state=10),
+                            param_grid=param_test2, scoring='accuracy', iid=False, cv=5)
+    gsearch2.fit(df_train[train_names], df_train[target_col])
+    print gsearch2.grid_scores_
+    print gsearch2.best_params_
+    print gsearch2.best_score_
+    #cv_results = model_selection.cross_validate(dt,df_train[train_names],
+    #                                         df_train[target_col],cv=cv_split)
+    dt = gsearch2
+    #dt.fit(df_train[train_names],df_train[target_col])
+
+    sub_df = pd.DataFrame(columns=submit_cols)
+    df_test['Survived'] = dt.predict(df_test[train_names])
+    sub_df[submit_cols] = df_test[submit_cols]
+    sub_df.to_csv("../data/titan/raw_rf.csv", index=False)
+
+
+
+
+def grid_voting(df,fts,target,cv,submit_cols,df_test):
     vote_est, param = common.get_all_tuned_algo()
-    df = df_train
-    fts = train_names
-    target = target_col
-    cv = cv_split
     for v in vote_est:
         print(v)
     grid_hard = ensemble.VotingClassifier(estimators=vote_est, voting='hard')
