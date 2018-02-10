@@ -5,6 +5,7 @@ import random
 import os
 import struct
 from numpy import append,array,int8,uint8,zeros
+from array import array as pyarray
 
 
 from matplotlib import pyplot as plt
@@ -26,7 +27,12 @@ class NeuralNet(object):
         self.sizes_ = sizes
         self.num_layers_ = len(sizes)
         self.w_ = [np.random.randn(y,x) for x,y in zip(sizes[:-1],sizes[1:])]
-        self.b_ = [np.random.randn(y,1) for x,y in zip(sizes[:-1],sizes[:-1])]
+        self.b_ = [np.random.randn(y,1) for y in sizes[1:]]
+        for w in self.w_:
+            print(w.shape)
+        for b in self.b_:
+            print(b.shape)
+        print ("hahax")
 
 
     def sigmoid(self,z):
@@ -66,6 +72,16 @@ class NeuralNet(object):
         activations = [x]
         zs = []
         for b, w in zip(self.b_, self.w_):
+            if w.shape[0] != b.shape[0]:
+                print(w.shape)
+                print(activation.shape)
+                print(b.shape)
+                print("print all:")
+                for b in self.b_:
+                    print(b.shape)
+                for w in self.w_:
+                    print(w.shape)
+
             z = np.dot(w,activation) + b
             zs.append(z)
             activation = self.sigmoid(z)
@@ -95,11 +111,11 @@ class NeuralNet(object):
         # 5 note: eta is divided by length of batch.
         for x,y in mini_batch:
             delta_nabla_b, delta_nabla_w = self.backprop(x,y)
-            nabla_b = [np+dnb for nb,dnb in zip(nabla_b, delta_nabla_b)]
+            nabla_b = [nb+dnb for nb,dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw,dnw in zip(nabla_w, delta_nabla_w)]
 
         self.w_ = [w-(eta/len(mini_batch)) * nw for w,nw in zip(self.w_,nabla_w)]
-        self.b_ = [b-(eta/len(mini_batch)) * nb for w,bn in zip(self.b_,nabla_b)]
+        self.b_ = [b-(eta/len(mini_batch)) * nb for b,nb in zip(self.b_,nabla_b)]
 
 
     def evaluate(self, test_data):
@@ -111,29 +127,17 @@ class NeuralNet(object):
         return value.tolist().index(max(value))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     def cost_derivative(self, output_a, y):
         return (output_a - y)
 
 
 def load_mnist(dataset = "training_data", digits = np.arange(10),path="."):
     if dataset == "training_data":
-        fname_image = os.path.join(path, "train-images-idx3-ubyte")
-        fname_label = os.path.join(path, "train-labels-idx1-ubyte")
+        fname_image = os.path.join(path, "train-images.idx3-ubyte")
+        fname_label = os.path.join(path, "train-labels.idx1-ubyte")
     elif dataset == "testing_data":
-        fname_image = os.path.join(path,'t10k-images-idx3-ubyte')
-        fname_label = os.path.join(path,'t10k-labels-idx1-ubyte')
+        fname_image = os.path.join(path,'t10k-images.idx3-ubyte')
+        fname_label = os.path.join(path,'t10k-labels.idx1-ubyte')
     else:
         raise ValueError("dataset must be 'training_data' or 'testing_data' ")
 
@@ -151,11 +155,11 @@ def load_mnist(dataset = "training_data", digits = np.arange(10),path="."):
     N = len(ind)
 
     images = zeros((N,rows,cols), dtype=uint8)
-    lables = zeros((N,1),dtype=uint8)
+    labels = zeros((N,1),dtype=uint8)
     for i in range(len(ind)):
-        images[i] = array(img[ind[i]*rows*cols]:(ind[i]+1)*rows*cols]).reshape((rows,cols))
+        images[i] = array(img[ind[i]*rows*cols:(ind[i]+1)*rows*cols]).reshape((rows,cols))
         labels[i] = lbl[ind[i]]
-    return images, lables
+    return images, labels
 
 def load_samples(dataset="training_data"):
     image,label = load_mnist(dataset)
@@ -184,7 +188,21 @@ def neutran_net():
 
 def main():
     #neutran_net()
-    plot_sigmoid()
+    #plot_sigmoid()
+
+    INPUT = 28*28
+    OUTPUT = 10
+    net = NeuralNet([INPUT,40,OUTPUT])
+    train_set = load_samples(dataset='training_data')
+    test_set = load_samples(dataset='testing_data')
+
+    net.SGD(train_set,13,100,3.0, test_data=test_set)
+    correct = 0;
+    for test_ft in test_set:
+        print(test_ft[1])
+        if np.argmax(net.predict(test_ft[0])) == test_ft[1]:
+            correct += 1
+    print("accuracy: ", correct,len(test_set))
 
 if __name__ == "__main__":
     main()
