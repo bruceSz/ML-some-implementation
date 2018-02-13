@@ -3,8 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
 _TRAIN = "../data/boston_house_p/train.csv"
 _TEST = "../data/boston_house_p/test.csv"
+
+#
+#https://www.kaggle.com/serigne/stacked-regressions-top-4-on-leaderboard
 
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor

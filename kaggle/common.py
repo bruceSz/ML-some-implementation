@@ -10,6 +10,7 @@ from sklearn import naive_bayes
 from sklearn import gaussian_process
 import numpy as np
 import pandas as pd
+import time
 #
 def get_all_tuned_algo():
     vote_est = [
@@ -114,6 +115,14 @@ def get_all_tuned_algo():
     return vote_est, params
 
 
+def tune_model_new(m,cv,param_grid, train,target,score):
+    start = time.time()
+    tuned_m = model_selection.GridSearchCV(m,param_grid=param_grid,cv=cv,scoring=score)
+    tuned_m.fit(train,target)
+    end = time.time()
+    print("Tuning cost time:",(end - start))
+    return tuned_m
+
 def tune_model(model,cv_split=None,param_grid = None,da = None,fts = None,label = None):
 
     tune_model = model_selection.GridSearchCV(model,
@@ -177,16 +186,16 @@ def fill_age_example():
     df = pd.DataFrame([s1,s2,s3],columns=['a','b','c','d'])
     df_g = df.groupby(['a','b']).mean()
 
-    print "Raw dataframe:"
-    print df
-    print "Dataframe group by ret"
+    print("Raw dataframe:")
+    print(df)
+    print("Dataframe group by ret")
 
     print("Reset index")
     #df_g = df_g.reset_index()
     #df_g = df_g[['a','b','d']]
     #df = fill_age_with(df,df_g,['a','b'],'d')
     df = fill_age_with1(df,df_g,'d')
-    print "After fill age with avg"
+    print("After fill age with avg")
     print(df)
 
 
